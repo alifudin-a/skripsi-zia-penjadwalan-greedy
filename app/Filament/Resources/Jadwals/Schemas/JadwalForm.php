@@ -35,7 +35,12 @@ class JadwalForm
                     ->searchable()
                     ->required(),
 
-                TextInput::make('kelas')
+                Select::make('kelas_id')
+                    ->label('Kelas')
+                    ->options(
+                        \App\Models\Kelas::pluck('nama_kelas', 'id')
+                    )
+                    ->searchable()
                     ->required(),
 
                 Select::make('hari')
@@ -49,40 +54,54 @@ class JadwalForm
                     ])
                     ->required(),
 
-                TextInput::make('jam_mulai')
-                    ->type('time')
-                    ->rule(function (callable $get) {
-                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                Select::make('sesi_praktikum_id')
+                    ->label('Sesi Praktikum')
+                    ->options(
+                        \App\Models\SesiPraktikum::all()
+                            ->mapWithKeys(function ($sesi) {
 
-                            $guruId = $get('guru_id');
-                            $hari = $get('hari');
-                            $jamMulai = $get('jam_mulai');
-                            $jamSelesai = $value;
-
-                            if (! $guruId || ! $hari || ! $jamMulai || ! $jamSelesai) {
-                                return;
-                            }
-
-                            $bentrok = Jadwal::query()
-                                ->where('guru_id', $guruId)
-                                ->where('hari', $hari)
-                                ->where(function ($q) use ($jamMulai, $jamSelesai) {
-
-                                    $q->where('jam_mulai', '<', $jamSelesai)
-                                        ->where('jam_selesai', '>', $jamMulai);
-                                })
-                                ->exists();
-
-                            if ($bentrok) {
-                                $fail('Guru sudah memiliki jadwal di jam tersebut.');
-                            }
-                        };
-                    })
+                                return [
+                                    $sesi->id => "{$sesi->nama_sesi} ({$sesi->jam_mulai} - {$sesi->jam_selesai})",
+                                ];
+                            })
+                    )
+                    ->searchable()
                     ->required(),
 
-                TextInput::make('jam_selesai')
-                    ->type('time')
-                    ->required(),
+                // TextInput::make('jam_mulai')
+                //     ->type('time')
+                //     ->rule(function (callable $get) {
+                //         return function (string $attribute, $value, \Closure $fail) use ($get) {
+
+                //             $guruId = $get('guru_id');
+                //             $hari = $get('hari');
+                //             $jamMulai = $get('jam_mulai');
+                //             $jamSelesai = $value;
+
+                //             if (! $guruId || ! $hari || ! $jamMulai || ! $jamSelesai) {
+                //                 return;
+                //             }
+
+                //             $bentrok = Jadwal::query()
+                //                 ->where('guru_id', $guruId)
+                //                 ->where('hari', $hari)
+                //                 ->where(function ($q) use ($jamMulai, $jamSelesai) {
+
+                //                     $q->where('jam_mulai', '<', $jamSelesai)
+                //                         ->where('jam_selesai', '>', $jamMulai);
+                //                 })
+                //                 ->exists();
+
+                //             if ($bentrok) {
+                //                 $fail('Guru sudah memiliki jadwal di jam tersebut.');
+                //             }
+                //         };
+                //     })
+                //     ->required(),
+
+                // TextInput::make('jam_selesai')
+                //     ->type('time')
+                //     ->required(),
 
                 Select::make('status')
                     ->options([

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+
 class Jadwal extends Model
 {
     protected $table = 'jadwals';
@@ -18,6 +19,8 @@ class Jadwal extends Model
         'jam_mulai',
         'jam_selesai',
         'status',
+        'sesi_praktikum_id',
+        'kelas_id',
     ];
 
     public function guru(): BelongsTo
@@ -33,5 +36,15 @@ class Jadwal extends Model
     public function laboratorium(): BelongsTo
     {
         return $this->belongsTo(Laboratorium::class);
+    }
+
+    public function sesiPraktikum(): BelongsTo
+    {
+        return $this->belongsTo(SesiPraktikum::class);
+    }
+
+    public function kelas()
+    {
+        return $this->belongsTo(Kelas::class);
     }
 }

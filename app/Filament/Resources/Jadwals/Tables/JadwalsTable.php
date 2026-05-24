@@ -25,13 +25,16 @@ class JadwalsTable
                 TextColumn::make('laboratorium.nama')
                     ->label('Laboratorium'),
 
-                TextColumn::make('kelas'),
+                TextColumn::make('kelas.nama_kelas')
+                    ->label('Kelas'),
 
                 TextColumn::make('hari'),
 
-                TextColumn::make('jam_mulai'),
+                TextColumn::make('sesiPraktikum.jam_mulai')
+                    ->label('Jam Mulai'),
 
-                TextColumn::make('jam_selesai'),
+                TextColumn::make('sesiPraktikum.jam_selesai')
+                    ->label('Jam Selesai'),
 
                 TextColumn::make('status')
                     ->badge(),

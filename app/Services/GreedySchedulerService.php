@@ -6,12 +6,13 @@ namespace App\Services;
 use App\Models\Jadwal;
 use App\Models\Laboratorium;
 use App\Models\MataPelajaran;
+use App\Models\SesiPraktikum;
+use App\Models\Kelas;
 
 class GreedySchedulerService
 {
     /**
      * Daftar hari aktif sekolah
-     * Akan digunakan scheduler untuk mencoba generate jadwal
      */
     protected array $hariList = [
         'Senin',
@@ -23,29 +24,7 @@ class GreedySchedulerService
     ];
 
     /**
-     * Daftar slot jam yang boleh dipakai
-     * Format:
-     * [jam_mulai, jam_selesai]
-     */
-    protected array $jamSlots = [
-        ['07:00', '09:00'],
-        ['09:00', '11:00'],
-        ['13:00', '15:00'],
-    ];
-
-    /**
-     * Daftar kelas
-     * Untuk sementara masih hardcoded
-     * nanti bisa dipindah ke tabel kelas
-     */
-    protected array $kelasList = [
-        'X TKJ 1',
-        'X TKJ 2',
-        'XI RPL 1',
-    ];
-
-    /**
-     * Method utama untuk generate jadwal
+     * Method utama generate jadwal
      */
     public function generate(): void
     {
@@ -53,165 +32,209 @@ class GreedySchedulerService
          * Ambil semua mata pelajaran
          */
         $mapels = MataPelajaran::all();
+        $sesiPraktikums = SesiPraktikum::all();
 
         /**
-         * Loop semua kelas
+         * LOOP SEMUA KELAS
          */
-        foreach ($this->kelasList as $kelas) {
+        foreach (Kelas::all() as $kelas) {
 
             /**
-             * Loop semua mata pelajaran
+             * LOOP SEMUA MAPEL
              */
             foreach ($mapels as $mapel) {
 
                 /**
-                 * Ambil guru yang mengajar mapel ini
-                 * relasi many-to-many:
-                 * guru_mata_pelajaran
+                 * total_jp mapel
+                 *
+                 * Contoh:
+                 * Jaringan = 8 JP
                  */
-                $gurus = $mapel->gurus;
+                $sisaJp = $mapel->total_jp;
 
                 /**
-                 * Loop semua guru
+                 * SELAMA MASIH ADA JP YANG BELUM TERJADWAL
+                 *
+                 * Contoh:
+                 * awal = 8
+                 * setelah generate 4 JP
+                 * sisa = 4
                  */
-                foreach ($gurus as $guru) {
+                while ($sisaJp > 0) {
 
                     /**
-                     * Loop semua hari
+                     * Ambil semua guru
+                     * yang bisa mengajar mapel ini
                      */
-                    foreach ($this->hariList as $hari) {
+                    $gurus = $mapel->gurus;
+
+                    /**
+                     * LOOP SEMUA GURU
+                     */
+                    foreach ($gurus as $guru) {
 
                         /**
-                         * Loop semua slot jam
+                         * LOOP SEMUA HARI
                          */
-                        foreach ($this->jamSlots as $slot) {
+                        foreach ($this->hariList as $hari) {
 
                             /**
-                             * Pecah array slot menjadi:
-                             * jam mulai dan jam selesai
+                             * LOOP SEMUA SLOT JAM
                              */
-                            [$jamMulai, $jamSelesai] = $slot;
+                            foreach ($sesiPraktikums as $sesi) {
 
-                            /**
-                             * CEK KETERSEDIAAN GURU
-                             *
-                             * Guru dianggap tersedia jika:
-                             * - hari sesuai
-                             * - jam_mulai <= slot mulai
-                             * - jam_selesai >= slot selesai
-                             *
-                             * Contoh:
-                             * guru tersedia 07:00 - 15:00
-                             * maka slot 09:00 - 11:00 valid
-                             */
-                            $tersedia = $guru->ketersediaans()
-                                ->where('hari', $hari)
-                                ->where('jam_mulai', '<=', $jamMulai)
-                                ->where('jam_selesai', '>=', $jamSelesai)
-                                ->exists();
+                                /**
+                                 * Ambil data slot
+                                 */
+                                $jamMulai = $sesi->jam_mulai;
+                                $jamSelesai = $sesi->jam_selesai;
+                                $jpSlot = $sesi->jumlah_jp;
 
-                            /**
-                             * Jika guru tidak tersedia
-                             * lanjut ke slot berikutnya
-                             */
-                            if (! $tersedia) {
-                                continue;
+                                /**
+                                 * CEK MAXIMAL JP PER SESI
+                                 *
+                                 * Contoh:
+                                 * max_per_sesi = 4
+                                 *
+                                 * jika slot 6 JP
+                                 * maka skip
+                                 */
+                                if ($jpSlot > $mapel->maksimal_jp_per_sesi) {
+                                    continue;
+                                }
+
+                                /**
+                                 * CEK KETERSEDIAAN GURU
+                                 *
+                                 * Guru harus:
+                                 * - tersedia di hari tersebut
+                                 * - jam availability mencakup slot
+                                 */
+                                $tersedia = $guru->ketersediaans()
+                                    ->where('hari', $hari)
+                                    ->where('jam_mulai', '<=', $jamMulai)
+                                    ->where('jam_selesai', '>=', $jamSelesai)
+                                    ->exists();
+
+                                /**
+                                 * Jika guru tidak tersedia
+                                 * lanjut ke slot berikutnya
+                                 */
+                                if (! $tersedia) {
+                                    continue;
+                                }
+
+                                /**
+                                 * CEK BENTROK GURU
+                                 *
+                                 * Rumus overlap:
+                                 *
+                                 * jadwal_lama.mulai < jadwal_baru.selesai
+                                 * DAN
+                                 * jadwal_lama.selesai > jadwal_baru.mulai
+                                 */
+                                $guruBentrok = Jadwal::query()
+                                    ->where('guru_id', $guru->id)
+                                    ->where('hari', $hari)
+                                    ->where(function ($q) use ($jamMulai, $jamSelesai) {
+
+                                        $q->where('jam_mulai', '<', $jamSelesai)
+                                            ->where('jam_selesai', '>', $jamMulai);
+                                    })
+                                    ->exists();
+
+                                /**
+                                 * Jika guru bentrok
+                                 * skip
+                                 */
+                                if ($guruBentrok) {
+                                    continue;
+                                }
+
+                                /**
+                                 * CARI LABORATORIUM KOSONG
+                                 *
+                                 * Lab tidak boleh dipakai
+                                 * di jam yang sama
+                                 */
+                                $lab = Laboratorium::query()
+                                    ->whereDoesntHave('jadwals', function ($q) use ($hari, $jamMulai, $jamSelesai) {
+
+                                        $q->where('hari', $hari)
+                                            ->where(function ($q2) use ($jamMulai, $jamSelesai) {
+
+                                                $q2->where('jam_mulai', '<', $jamSelesai)
+                                                    ->where('jam_selesai', '>', $jamMulai);
+                                            });
+                                    })
+                                    ->first();
+
+                                /**
+                                 * Jika tidak ada lab kosong
+                                 * lanjut slot berikutnya
+                                 */
+                                if (! $lab) {
+                                    continue;
+                                }
+
+                                /**
+                                 * TENTUKAN BERAPA JP YANG DIPAKAI
+                                 *
+                                 * Contoh:
+                                 *
+                                 * sisa JP = 2
+                                 * slot JP = 4
+                                 *
+                                 * maka pakai:
+                                 * 2 JP saja
+                                 */
+                                $jpDigunakan = min($jpSlot, $sisaJp);
+
+                                /**
+                                 * SIMPAN JADWAL
+                                 */
+                                Jadwal::create([
+                                    'guru_id' => $guru->id,
+                                    'mata_pelajaran_id' => $mapel->id,
+                                    'laboratorium_id' => $lab->id,
+                                    'kelas_id' => $kelas->id,
+                                    'kelas' => $kelas->nama_kelas,
+                                    'hari' => $hari,
+                                    'jam_mulai' => $jamMulai,
+                                    'jam_selesai' => $jamSelesai,
+                                    'status' => 'draft',
+                                    'sesi_praktikum_id' => $sesi->id,
+                                ]);
+
+                                /**
+                                 * KURANGI SISA JP
+                                 *
+                                 * Contoh:
+                                 * awal = 8
+                                 * dipakai = 4
+                                 * sisa = 4
+                                 */
+                                $sisaJp -= $jpDigunakan;
+
+                                /**
+                                 * GREEDY STRATEGY
+                                 *
+                                 * Setelah ketemu slot valid:
+                                 * - langsung pakai
+                                 * - lanjut generate JP berikutnya
+                                 */
+                                continue 5;
                             }
-
-                            /**
-                             * CEK BENTROK GURU
-                             *
-                             * Tujuan:
-                             * memastikan guru tidak mengajar
-                             * di jam yang sama
-                             *
-                             * Rumus overlap:
-                             * jadwal_lama.mulai < jadwal_baru.selesai
-                             * DAN
-                             * jadwal_lama.selesai > jadwal_baru.mulai
-                             */
-                            $guruBentrok = Jadwal::query()
-                                ->where('guru_id', $guru->id)
-                                ->where('hari', $hari)
-                                ->where(function ($q) use ($jamMulai, $jamSelesai) {
-
-                                    $q->where('jam_mulai', '<', $jamSelesai)
-                                        ->where('jam_selesai', '>', $jamMulai);
-                                })
-                                ->exists();
-
-                            /**
-                             * Jika guru bentrok
-                             * lanjut ke slot berikutnya
-                             */
-                            if ($guruBentrok) {
-                                continue;
-                            }
-
-                            /**
-                             * CARI LABORATORIUM KOSONG
-                             *
-                             * Ambil lab yang:
-                             * - tidak dipakai di hari yang sama
-                             * - tidak overlap jam
-                             */
-                            $lab = Laboratorium::query()
-                                ->whereDoesntHave('jadwals', function ($q) use ($hari, $jamMulai, $jamSelesai) {
-
-                                    $q->where('hari', $hari)
-                                        ->where(function ($q2) use ($jamMulai, $jamSelesai) {
-
-                                            $q2->where('jam_mulai', '<', $jamSelesai)
-                                                ->where('jam_selesai', '>', $jamMulai);
-                                        });
-                                })
-                                ->first();
-
-                            /**
-                             * Jika tidak ada lab kosong
-                             * lanjut ke slot berikutnya
-                             */
-                            if (! $lab) {
-                                continue;
-                            }
-
-                            /**
-                             * SIMPAN JADWAL
-                             *
-                             * Jika semua valid:
-                             * - guru tersedia
-                             * - guru tidak bentrok
-                             * - lab kosong
-                             *
-                             * maka jadwal dibuat
-                             */
-                            Jadwal::create([
-                                'guru_id' => $guru->id,
-                                'mata_pelajaran_id' => $mapel->id,
-                                'laboratorium_id' => $lab->id,
-                                'kelas' => $kelas,
-                                'hari' => $hari,
-                                'jam_mulai' => $jamMulai,
-                                'jam_selesai' => $jamSelesai,
-                                'status' => 'draft',
-                            ]);
-
-                            /**
-                             * GREEDY STRATEGY
-                             *
-                             * Setelah menemukan slot valid pertama:
-                             * - langsung pakai
-                             * - lanjut ke mapel berikutnya
-                             *
-                             * continue 4 berarti keluar dari:
-                             * - slot
-                             * - hari
-                             * - guru
-                             * - mapel
-                             */
-                            continue 4;
                         }
                     }
+
+                    /**
+                     * SAFETY BREAK
+                     *
+                     * Jika tidak ada slot valid sama sekali,
+                     * hindari infinite loop
+                     */
+                    break;
                 }
             }
         }
