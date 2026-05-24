@@ -13,10 +13,20 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class GuruResource extends Resource
 {
     protected static ?string $model = Guru::class;
+
+    protected static ?string $slug = 'guru';
+
+    protected static ?string $navigationLabel = 'Guru';
+
+    protected static ?string $modelLabel = 'Guru';
+
+    protected static ?string $pluralModelLabel = 'Guru';
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -48,5 +58,13 @@ class GuruResource extends Resource
             'create' => CreateGuru::route('/create'),
             'edit' => EditGuru::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user?->role === 'admin';
     }
 }

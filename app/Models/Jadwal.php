@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Kelas;
 
 
 class Jadwal extends Model
@@ -43,8 +44,8 @@ class Jadwal extends Model
         return $this->belongsTo(SesiPraktikum::class);
     }
 
-    public function kelas()
+    public function kelasRelasi()
     {
-        return $this->belongsTo(Kelas::class);
+        return $this->belongsTo(Kelas::class, 'kelas_id');
     }
 }

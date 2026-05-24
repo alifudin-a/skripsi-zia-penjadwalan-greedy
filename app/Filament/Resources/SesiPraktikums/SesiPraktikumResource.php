@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class SesiPraktikumResource extends Resource
 {
@@ -54,5 +56,13 @@ class SesiPraktikumResource extends Resource
             'create' => CreateSesiPraktikum::route('/create'),
             'edit' => EditSesiPraktikum::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user?->role === 'admin';
     }
 }

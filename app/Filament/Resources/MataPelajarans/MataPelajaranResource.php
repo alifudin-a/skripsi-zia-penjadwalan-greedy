@@ -13,10 +13,20 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class MataPelajaranResource extends Resource
 {
     protected static ?string $model = MataPelajaran::class;
+
+    protected static ?string $slug = 'mata-pelajaran';
+
+    protected static ?string $navigationLabel = 'Mata Pelajaran';
+
+    protected static ?string $modelLabel = 'Mata Pelajaran';
+
+    protected static ?string $pluralModelLabel = 'Mata Pelajaran';
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -48,5 +58,13 @@ class MataPelajaranResource extends Resource
             'create' => CreateMataPelajaran::route('/create'),
             'edit' => EditMataPelajaran::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user?->role === 'admin';
     }
 }

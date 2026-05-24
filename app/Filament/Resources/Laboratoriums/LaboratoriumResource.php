@@ -12,6 +12,8 @@ use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class LaboratoriumResource extends Resource
 {
@@ -44,5 +46,13 @@ class LaboratoriumResource extends Resource
             'create' => CreateLaboratorium::route('/create'),
             'edit' => EditLaboratorium::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user?->role === 'admin';
     }
 }

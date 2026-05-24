@@ -32,9 +32,17 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    // public function canAccessPanel(Panel $panel): bool
+    // {
+    //     return $this->role === 'admin';
+    // }
+
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, [
+            'admin',
+            'guru',
+        ]);
     }
 
     protected $fillable = [
@@ -45,7 +53,7 @@ class User extends Authenticatable implements FilamentUser
     ];
 
     public function guru()
-{
-    return $this->hasOne(Guru::class);
-}
+    {
+        return $this->hasOne(Guru::class);
+    }
 }
