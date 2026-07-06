@@ -50,7 +50,7 @@ class GreedySchedulerService
                  * Contoh:
                  * Jaringan = 8 JP
                  */
-                $sisaJp = $mapel->total_jp;
+                $sisaJp = $mapel->total_jp; 
 
                 /**
                  * SELAMA MASIH ADA JP YANG BELUM TERJADWAL

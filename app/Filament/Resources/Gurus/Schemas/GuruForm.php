@@ -63,7 +63,6 @@ class GuruForm
                         TextInput::make('email')
                             ->email()
                             ->required()
-                            ->dehydrated(false)
                             ->autocomplete(false),
 
                         /**
@@ -72,7 +71,6 @@ class GuruForm
                         TextInput::make('password')
                             ->password()
                             ->required()
-                            ->dehydrated(false)
                             ->autocomplete(false),
                     ]),
             ]);
