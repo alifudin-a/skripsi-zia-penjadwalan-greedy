@@ -86,9 +86,10 @@ class JadwalPublicController extends Controller
         $selectedGuru = $guruId ? $guruList->firstWhere('id', $guruId) : null;
         $selectedMapel = $mapelId ? $mapelList->firstWhere('id', $mapelId) : null;
 
-        // Query jadwal — selalu filter by hari.
+        // Query jadwal — selalu filter by hari, hanya status published.
         $query = Jadwal::query()
             ->with(['mataPelajaran', 'guru', 'laboratorium', 'kelasRelasi'])
+            ->where('status', 'published')
             ->where('hari', $hari);
 
         if ($kelasId) {
