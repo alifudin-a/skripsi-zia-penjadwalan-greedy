@@ -289,17 +289,33 @@ Tombol **Reset ke hari ini** muncul di samping tombol Tampilkan saat ada filter 
 
 ## Reset Password / Akun
 
-Reset password admin melalui command `php artisan tinker` (atau `php artisan make:filament-user`):
+Gunakan `php artisan tinker` (mode interaktif) untuk mengelola akun. Cara ini **paling aman dan kompatibel di semua OS** (Windows/Laragon, macOS, Linux).
+
+### Buat User Admin Baru
 
 ```bash
-php artisan tinker --execute="\App\Models\User::where('email','admin@x.com')->update(['password'=>bcrypt('passwordbaru')])"
+php artisan tinker
 ```
 
-Atau buat user baru via tinker:
+Lalu ketik di prompt `>>>`:
+
+```php
+App\Models\User::create(['name'=>'Admin','email'=>'admin@x.com','password'=>bcrypt('password'),'role'=>'admin']);
+```
+
+Ketik `exit` untuk keluar dari tinker.
+
+### Reset Password User
 
 ```bash
-php artisan tinker --execute="\App\Models\User::create(['name'=>'Admin','email'=>'admin@x.com','password'=>bcrypt('password'),'role'=>'admin'])"
+php artisan tinker
 ```
+
+```php
+App\Models\User::where('email','admin@x.com')->update(['password'=>bcrypt('passwordbaru')]);
+```
+
+> ⚠️ **Catatan Windows (Laragon / CMD):** Jangan gunakan `--execute="..."` dengan backslash (`\App\Models\...`) karena escaping di Windows CMD berbeda dan akan muncul error `Undefined constant`. Selalu gunakan **tinker interaktif** (ketik `php artisan tinker` dulu, baru jalankan perintah PHP).
 
 ---
 
@@ -312,6 +328,7 @@ php artisan tinker --execute="\App\Models\User::create(['name'=>'Admin','email'=
 | Guru bentrok jadwal | Tambah ketersediaan guru atau kurangi JP mapel |
 | Tidak bisa login | Cek role user harus `admin` atau `guru` |
 | Tombol Generate tidak muncul | Kemungkinan role bukan `admin` (cek `AdminPanelProvider`) |
+| `Undefined constant "App\Models\User"` (Windows) | Jangan pakai `--execute="..."` di CMD. Gunakan tinker interaktif: ketik `php artisan tinker` dulu, baru jalankan perintah PHP |
 
 ---
 
